@@ -9,6 +9,21 @@ const numericColumns = new Set([
   "market_odds"
 ]);
 
+const defaultRow = {
+  date: "",
+  team: "",
+  opponent: "",
+  location: "home",
+  team_score: 0,
+  opponent_score: 0,
+  shots_for: 0,
+  shots_against: 0,
+  xg_for: 0,
+  xg_against: 0,
+  injuries: 0,
+  market_odds: 2
+};
+
 export function parseCsv(csvText) {
   const lines = csvText
     .trim()
@@ -24,11 +39,14 @@ export function parseCsv(csvText) {
 
   return lines.slice(1).map((line) => {
     const values = splitCsvLine(line);
-    const entry = {};
+    const entry = { ...defaultRow };
 
     headers.forEach((header, index) => {
       const rawValue = (values[index] ?? "").trim();
-      entry[header] = numericColumns.has(header) ? Number(rawValue) : rawValue;
+      if (!header) {
+        return;
+      }
+      entry[header] = numericColumns.has(header) ? safeNumber(rawValue, defaultRow[header] ?? 0) : rawValue || defaultRow[header] || "";
     });
 
     entry.result = getResult(entry.team_score, entry.opponent_score);
@@ -39,7 +57,7 @@ export function parseCsv(csvText) {
 }
 
 export function listTeams(rows) {
-  return [...new Set(rows.map((row) => row.team))].sort((left, right) => left.localeCompare(right));
+  return [...new Set(rows.map((row) => row.team).filter(Boolean))].sort((left, right) => left.localeCompare(right));
 }
 
 function splitCsvLine(line) {
@@ -51,6 +69,13 @@ function splitCsvLine(line) {
     const char = line[index];
 
     if (char === '"') {
+      const nextChar = line[index + 1];
+      if (insideQuotes && nextChar === '"') {
+        current += '"';
+        index += 1;
+        continue;
+      }
+
       insideQuotes = !insideQuotes;
       continue;
     }
@@ -78,4 +103,9 @@ function getResult(teamScore, opponentScore) {
   }
 
   return "D";
+}
+
+function safeNumber(value, fallback = 0) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : fallback;
 }

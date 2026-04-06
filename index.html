@@ -36,6 +36,36 @@
 
         <div class="stack">
           <div class="field-group">
+            <label for="data-source">Fuente de datos</label>
+            <select id="data-source">
+              <option value="manual">CSV manual</option>
+              <option value="demo">Dataset demo seguro</option>
+              <option value="football-data">football-data.org</option>
+              <option value="sportmonks">Sportmonks</option>
+            </select>
+            <small id="data-source-help">
+              El proyecto prioriza conectores oficiales o datos manuales para evitar riesgos legales.
+            </small>
+          </div>
+
+          <div class="grid two">
+            <div class="field-group">
+              <label for="provider-team-ids">Team IDs proveedor</label>
+              <input id="provider-team-ids" type="text" value="57,64" />
+            </div>
+            <div class="field-group">
+              <label for="provider-season">Temporada</label>
+              <input id="provider-season" type="text" value="2024" />
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label for="provider-competition">Competicion / liga</label>
+            <input id="provider-competition" type="text" value="PL" />
+            <small id="provider-status">Cargando catalogo de conectores...</small>
+          </div>
+
+          <div class="field-group">
             <label for="scenario-title">Escenario</label>
             <input id="scenario-title" type="text" value="Prediccion de partido deportivo" />
           </div>
@@ -52,7 +82,7 @@
           </div>
 
           <div class="grid two">
-            <button id="load-sample" class="secondary">Cargar dataset demo</button>
+            <button id="load-provider" class="secondary">Importar fuente</button>
             <button id="run-forecast" class="primary">Convocar agentes</button>
           </div>
 

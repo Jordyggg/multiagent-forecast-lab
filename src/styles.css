@@ -383,6 +383,18 @@ button:hover {
   margin-top: 2px;
 }
 
+.provider-ok {
+  color: var(--accent);
+}
+
+.provider-warn {
+  color: var(--accent-2);
+}
+
+.provider-error {
+  color: var(--danger);
+}
+
 @media (max-width: 1160px) {
   .layout {
     grid-template-columns: 1fr;

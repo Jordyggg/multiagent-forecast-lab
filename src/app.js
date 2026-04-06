@@ -3,20 +3,52 @@ import { modelCatalog } from "./models.js";
 import { parseCsv, listTeams } from "./parser.js";
 import { sampleCsv } from "./sampleData.js";
 
+const fallbackProviders = [
+  {
+    id: "demo",
+    name: "Dataset demo seguro",
+    configured: true,
+    docsUrl: "local-demo",
+    notes: "Fuente local incluida en el proyecto."
+  },
+  {
+    id: "football-data",
+    name: "football-data.org",
+    configured: false,
+    docsUrl: "https://www.football-data.org/documentation/quickstart",
+    notes: "Conector oficial para datos autorizados con token en servidor."
+  },
+  {
+    id: "sportmonks",
+    name: "Sportmonks",
+    configured: false,
+    docsUrl: "https://docs.sportmonks.com/football",
+    notes: "Reservado para estadisticas avanzadas como xG en futuras iteraciones."
+  }
+];
+
 const state = {
   rows: [],
   teams: [],
   agentState: buildAgentState(),
-  latestResult: null
+  latestResult: null,
+  providers: fallbackProviders,
+  currentSourceId: "demo"
 };
 
 const elements = {
+  dataSource: document.querySelector("#data-source"),
+  dataSourceHelp: document.querySelector("#data-source-help"),
+  providerTeamIds: document.querySelector("#provider-team-ids"),
+  providerSeason: document.querySelector("#provider-season"),
+  providerCompetition: document.querySelector("#provider-competition"),
+  providerStatus: document.querySelector("#provider-status"),
+  loadProvider: document.querySelector("#load-provider"),
   scenarioTitle: document.querySelector("#scenario-title"),
   homeTeam: document.querySelector("#home-team"),
   awayTeam: document.querySelector("#away-team"),
   csvInput: document.querySelector("#csv-input"),
   agentGrid: document.querySelector("#agent-grid"),
-  loadSample: document.querySelector("#load-sample"),
   runForecast: document.querySelector("#run-forecast"),
   decisionTitle: document.querySelector("#decision-title"),
   decisionSubtitle: document.querySelector("#decision-subtitle"),
@@ -36,19 +68,37 @@ const elements = {
 
 bootstrap();
 
-function bootstrap() {
+async function bootstrap() {
   renderAgentControls();
   bindEvents();
-  elements.csvInput.value = sampleCsv;
-  ingestCsv(sampleCsv);
+  await loadProviderCatalog();
+  elements.dataSource.value = state.currentSourceId;
+  renderProviderDetails();
+
+  try {
+    await importSelectedSource({ resetOutput: false });
+  } catch (error) {
+    elements.csvInput.value = sampleCsv;
+    ingestCsv(sampleCsv);
+    setProviderStatus(error.message, "provider-warn");
+  }
+
   renderEmptyState();
 }
 
 function bindEvents() {
-  elements.loadSample.addEventListener("click", () => {
-    elements.csvInput.value = sampleCsv;
-    ingestCsv(sampleCsv);
-    renderEmptyState();
+  elements.dataSource.addEventListener("change", () => {
+    state.currentSourceId = elements.dataSource.value;
+    renderProviderDetails();
+  });
+
+  elements.loadProvider.addEventListener("click", async () => {
+    try {
+      await importSelectedSource({ resetOutput: true });
+    } catch (error) {
+      setProviderStatus(error.message, "provider-error");
+      renderError(error.message);
+    }
   });
 
   elements.runForecast.addEventListener("click", () => {
@@ -83,6 +133,97 @@ function bindEvents() {
     link.click();
     URL.revokeObjectURL(url);
   });
+}
+
+async function loadProviderCatalog() {
+  try {
+    const response = await fetch("/api/providers");
+    if (!response.ok) {
+      throw new Error("No se pudo cargar el catalogo de conectores del servidor.");
+    }
+
+    const payload = await response.json();
+    state.providers = payload.providers;
+  } catch (error) {
+    state.providers = fallbackProviders;
+  }
+}
+
+async function importSelectedSource({ resetOutput }) {
+  const sourceId = elements.dataSource.value;
+  state.currentSourceId = sourceId;
+
+  if (sourceId === "manual") {
+    ingestCsv(elements.csvInput.value);
+    setProviderStatus("CSV manual cargado correctamente.", "provider-ok");
+    if (resetOutput) {
+      renderEmptyState();
+    }
+    return;
+  }
+
+  setProviderStatus("Importando dataset desde el conector seleccionado...", "provider-warn");
+
+  const response = await fetch("/api/providers/load", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      sourceId,
+      params: {
+        teamIds: elements.providerTeamIds.value,
+        season: elements.providerSeason.value,
+        competitionCode: elements.providerCompetition.value
+      }
+    })
+  });
+
+  const payload = await response.json();
+  if (!response.ok) {
+    throw new Error(payload.error || "La importacion del proveedor fallo.");
+  }
+
+  elements.csvInput.value = payload.csvText;
+  ingestCsv(payload.csvText);
+
+  const sourceLabel = payload.metadata?.sourceLabel || sourceId;
+  const coverage = payload.metadata?.coverage ? ` Cobertura: ${payload.metadata.coverage}.` : "";
+  const caveat = payload.metadata?.caveat ? ` ${payload.metadata.caveat}` : "";
+  setProviderStatus(`${sourceLabel} importado correctamente.${coverage}${caveat}`, "provider-ok");
+
+  if (resetOutput) {
+    renderEmptyState();
+  }
+}
+
+function renderProviderDetails() {
+  const provider = state.providers.find((item) => item.id === state.currentSourceId);
+
+  if (state.currentSourceId === "manual") {
+    elements.dataSourceHelp.textContent = "Modo manual: puedes pegar tu propio CSV, editarlo y ejecutar el analisis localmente.";
+    setProviderStatus("Sin dependencia externa. Tus datos quedan completamente bajo control del proyecto.", "provider-ok");
+    return;
+  }
+
+  if (!provider) {
+    elements.dataSourceHelp.textContent = "Conector no reconocido.";
+    setProviderStatus("Selecciona una fuente valida.", "provider-error");
+    return;
+  }
+
+  elements.dataSourceHelp.textContent = provider.notes;
+
+  if (provider.configured) {
+    setProviderStatus(`${provider.name} esta listo para importar desde el servidor.`, "provider-ok");
+  } else {
+    setProviderStatus(`${provider.name} aun no esta configurado en este entorno. Puedes seguir trabajando con el dataset demo o CSV manual.`, "provider-warn");
+  }
+}
+
+function setProviderStatus(message, className) {
+  elements.providerStatus.textContent = message;
+  elements.providerStatus.className = className;
 }
 
 function ingestCsv(csvText) {
@@ -158,7 +299,7 @@ function renderAgentControls() {
 
 function renderEmptyState() {
   elements.decisionTitle.textContent = "Listo para analizar";
-  elements.decisionSubtitle.textContent = "Usa el dataset demo o pega tus propios datos historicos.";
+  elements.decisionSubtitle.textContent = "Usa un conector oficial, el dataset demo o pega tus propios datos historicos.";
   elements.homeProb.textContent = "--";
   elements.probDetail.textContent = "Sin consenso aun";
   elements.confidenceScore.textContent = "--";
@@ -286,6 +427,8 @@ function buildReportMarkdown(result) {
     `# ${result.scenarioTitle}`,
     "",
     `Generado: ${timestamp}`,
+    "",
+    `Fuente de datos: ${state.currentSourceId}`,
     "",
     "## Decision",
     `- Decision principal: ${result.summary.decision}`,
