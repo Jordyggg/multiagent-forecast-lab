@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Multiagent Forecast Lab</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./src/styles.css">
+</head>
+<body>
+  <div class="page-shell">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Sistema pionero de decision intelligence</p>
+        <h1>Multiagent Forecast Lab</h1>
+        <p class="hero-copy">
+          Un laboratorio interactivo donde varios agentes colaboran, cada uno con su propio modelo,
+          para leer datos historicos, debatir escenarios y producir una prediccion explicable.
+        </p>
+      </div>
+      <div class="hero-badge">
+        <span>Demo funcional</span>
+        <strong>5 agentes / modelos intercambiables</strong>
+        <small>Listo para evolucionar a APIs reales</small>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="panel control-panel">
+        <div class="section-head">
+          <h2>Centro de mando</h2>
+          <p>Configura el evento, los datos y la personalidad de cada agente.</p>
+        </div>
+
+        <div class="stack">
+          <div class="field-group">
+            <label for="scenario-title">Escenario</label>
+            <input id="scenario-title" type="text" value="Prediccion de partido deportivo" />
+          </div>
+
+          <div class="grid two">
+            <div class="field-group">
+              <label for="home-team">Equipo / opcion A</label>
+              <select id="home-team"></select>
+            </div>
+            <div class="field-group">
+              <label for="away-team">Equipo / opcion B</label>
+              <select id="away-team"></select>
+            </div>
+          </div>
+
+          <div class="grid two">
+            <button id="load-sample" class="secondary">Cargar dataset demo</button>
+            <button id="run-forecast" class="primary">Convocar agentes</button>
+          </div>
+
+          <div class="field-group">
+            <label for="csv-input">Datos historicos en CSV</label>
+            <textarea id="csv-input" spellcheck="false"></textarea>
+            <small>
+              Columnas esperadas: date,team,opponent,location,team_score,opponent_score,shots_for,shots_against,xg_for,xg_against,injuries,market_odds
+            </small>
+          </div>
+        </div>
+
+        <div class="section-head compact">
+          <h2>Escuadron multiagente</h2>
+          <p>Activa agentes, cambia su modelo y ajusta su peso en el consenso.</p>
+        </div>
+        <div id="agent-grid" class="agent-grid"></div>
+      </section>
+
+      <section class="panel output-panel">
+        <div class="section-head">
+          <h2>Sala de consenso</h2>
+          <p>El sistema fusiona las opiniones, mide riesgo y explica por que recomienda una accion.</p>
+        </div>
+
+        <div class="summary-grid">
+          <article class="metric-card accent">
+            <span>Decision principal</span>
+            <strong id="decision-title">Esperando datos</strong>
+            <small id="decision-subtitle">Carga el dataset y ejecuta el analisis.</small>
+          </article>
+          <article class="metric-card">
+            <span>Probabilidad local / opcion A</span>
+            <strong id="home-prob">--</strong>
+            <small id="prob-detail">Sin consenso aun</small>
+          </article>
+          <article class="metric-card">
+            <span>Nivel de confianza</span>
+            <strong id="confidence-score">--</strong>
+            <small id="risk-detail">El riesgo aparecera aqui</small>
+          </article>
+        </div>
+
+        <div class="chart-panel">
+          <div class="chart-head">
+            <h3>Ritmo reciente</h3>
+            <button id="export-report" class="ghost">Exportar reporte</button>
+          </div>
+          <div id="trend-chart" class="trend-chart"></div>
+        </div>
+
+        <div class="summary-grid dual">
+          <article class="metric-card">
+            <span>Marcador estimado</span>
+            <strong id="scoreline">--</strong>
+            <small id="score-rationale">Sin estimacion</small>
+          </article>
+          <article class="metric-card">
+            <span>Recomendacion</span>
+            <strong id="recommendation-label">--</strong>
+            <small id="recommendation-copy">Sin lectura todavia</small>
+          </article>
+        </div>
+
+        <div class="section-head compact">
+          <h2>Razones y debate</h2>
+          <p>Cada agente expone su tesis, sus alertas y el impacto de su modelo elegido.</p>
+        </div>
+        <div id="agent-output" class="agent-output"></div>
+      </section>
+    </main>
+  </div>
+
+  <template id="agent-card-template">
+    <article class="agent-card">
+      <div class="agent-card-head">
+        <div>
+          <h3 class="agent-name"></h3>
+          <p class="agent-role"></p>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" class="agent-enabled" checked>
+          <span>Activo</span>
+        </label>
+      </div>
+
+      <div class="field-group">
+        <label>Modelo</label>
+        <select class="agent-model"></select>
+      </div>
+
+      <div class="field-group">
+        <label>Peso en consenso</label>
+        <input class="agent-weight" type="range" min="0.6" max="1.5" step="0.1">
+        <small class="agent-weight-label"></small>
+      </div>
+    </article>
+  </template>
+
+  <script type="module" src="./src/app.js"></script>
+</body>
+</html>
